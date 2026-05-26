@@ -11,28 +11,56 @@ namespace DisasterAlert.Forms
         private readonly MonitoramentoRepository _monitoramentoRepo = new();
         private readonly AlertaRepository _alertaRepo = new();
 
+        private int _currentPage = 0;
+
+        private readonly (string Title, string Sub, Panel? Page)[] _pages = null!;
+
         public FormDashboard()
         {
             InitializeComponent();
-            this.Load += FormDashboard_Load;
-            btnExecutarMonitoramento.Click += BtnExecutarMonitoramento_Click;
-            btnNovaCidade.Click += BtnNovaCidade_Click;
-            btnEditarCidade.Click += BtnEditarCidade_Click;
-            btnExcluirCidade.Click += BtnExcluirCidade_Click;
-            btnSimularCidade.Click += BtnSimularCidade_Click;
-            btnFiltrarMonitoramentos.Click += BtnFiltrarMonitoramentos_Click;
-            btnTodosMonitoramentos.Click += BtnTodosMonitoramentos_Click;
-            btnEncerrarAlerta.Click += BtnEncerrarAlerta_Click;
-            btnAtualizarAlertas.Click += async (_, __) => await CarregarAlertasAsync();
-            btnAtualizarRelatorio.Click += async (_, __) => await CarregarRelatorioAsync();
-            tabControl.SelectedIndexChanged += async (_, __) => await AoTrocarTabAsync();
 
-            // Posiciona status label no canto direito do header
-            pnlHeader.Resize += (_, __) =>
-                lblStatus.Location = new Point(pnlHeader.Width - lblStatus.Width - 20, 28);
+            _pages = new[]
+            {
+                ("Dashboard",      "Visão geral do sistema de monitoramento",  (Panel?)null),
+                ("Cidades",        "Gerenciar cidades monitoradas",             (Panel?)null),
+                ("Monitoramentos", "Histórico de leituras climáticas",          (Panel?)null),
+                ("Alertas",        "Alertas de desastres gerados",              (Panel?)null),
+                ("Relatório",      "Resumo consolidado por cidade",             (Panel?)null),
+            };
+
+            // assign page references after InitializeComponent
+            _pages[0] = (_pages[0].Title, _pages[0].Sub, pageDashboard);
+            _pages[1] = (_pages[1].Title, _pages[1].Sub, pageCidades);
+            _pages[2] = (_pages[2].Title, _pages[2].Sub, pageMonitoramentos);
+            _pages[3] = (_pages[3].Title, _pages[3].Sub, pageAlertas);
+            _pages[4] = (_pages[4].Title, _pages[4].Sub, pageRelatorio);
+
+            WireEvents();
+            this.Load += async (_, __) => await OnLoadAsync();
         }
 
-        private async void FormDashboard_Load(object sender, EventArgs e)
+        private void WireEvents()
+        {
+            for (int i = 0; i < _navButtons.Length; i++)
+            {
+                int idx = i;
+                _navButtons[i].Click += async (_, __) => await NavigateToAsync(idx);
+            }
+
+            btnExecutarMonitoramento.Click   += BtnExecutar_Click;
+            btnNovaCidade.Click              += BtnNovaCidade_Click;
+            btnEditarCidade.Click            += BtnEditarCidade_Click;
+            btnExcluirCidade.Click           += BtnExcluirCidade_Click;
+            btnSimularCidade.Click           += BtnSimularCidade_Click;
+            btnFiltrarMonitoramentos.Click   += BtnFiltrar_Click;
+            btnTodosMonitoramentos.Click     += async (_, __) => await CarregarMonitoramentosAsync();
+            btnEncerrarAlerta.Click          += BtnEncerrar_Click;
+            btnAtualizarAlertas.Click        += async (_, __) => await CarregarAlertasAsync();
+            btnAtualizarRelatorio.Click      += async (_, __) => await CarregarRelatorioAsync();
+            chkSomenteAtivos.CheckedChanged  += async (_, __) => await CarregarAlertasAsync();
+        }
+
+        private async Task OnLoadAsync()
         {
             try
             {
@@ -40,7 +68,6 @@ namespace DisasterAlert.Forms
                 await Database.DatabaseConfig.InicializarBancoDeDadosAsync();
                 await Database.DatabaseConfig.SeedDadosIniciaisAsync();
                 await CarregarDashboardAsync();
-                await CarregarCidadesAsync();
                 await CarregarComboFiltroAsync();
                 SetStatus("Sistema carregado com sucesso.");
             }
@@ -52,47 +79,73 @@ namespace DisasterAlert.Forms
             }
         }
 
-        // ─── DASHBOARD ────────────────────────────────────────────────────────
+        // ─── NAVIGATION ───────────────────────────────────────────────────
+        private async Task NavigateToAsync(int idx)
+        {
+            _currentPage = idx;
+
+            // Toggle nav button styles
+            for (int i = 0; i < _navButtons.Length; i++)
+                _navButtons[i].BackColor = i == idx
+                    ? Color.FromArgb(30, 80, 160)
+                    : Color.Transparent;
+
+            // Show/hide pages
+            foreach (var (_, _, page) in _pages)
+                if (page != null) page.Visible = false;
+            if (_pages[idx].Page != null)
+                _pages[idx].Page!.Visible = true;
+
+            lblPageTitle.Text = _pages[idx].Title;
+            lblPageSub.Text   = _pages[idx].Sub;
+
+            switch (idx)
+            {
+                case 0: await CarregarDashboardAsync(); break;
+                case 1: await CarregarCidadesAsync(); break;
+                case 2: await CarregarMonitoramentosAsync(); break;
+                case 3: await CarregarAlertasAsync(); break;
+                case 4: await CarregarRelatorioAsync(); break;
+            }
+        }
+
+        // ─── DASHBOARD ────────────────────────────────────────────────────
         private async Task CarregarDashboardAsync()
         {
             try
             {
                 var cidades = (await _cidadeRepo.ListarTodosAsync()).ToList();
-                var alertasAtivos = (await _alertaRepo.ListarAtivosAsync()).ToList();
-                int criticos = alertasAtivos.Count(a => a.Nivel == NivelAlerta.Critico);
+                var alertas = (await _alertaRepo.ListarAtivosAsync()).ToList();
+                int criticos = alertas.Count(a => a.Nivel == NivelAlerta.Critico);
 
-                AtualizarCard(cardCidades, cidades.Count.ToString());
-                AtualizarCard(cardAlertas, alertasAtivos.Count.ToString());
-                AtualizarCard(cardCriticos, criticos.ToString());
-                AtualizarCard(cardUltimaLeitura, DateTime.Now.ToString("HH:mm"));
+                _cardValueLabels[0].Text = cidades.Count.ToString();
+                _cardValueLabels[1].Text = alertas.Count.ToString();
+                _cardValueLabels[2].Text = criticos.ToString();
+                _cardValueLabels[3].Text = DateTime.Now.ToString("HH:mm");
+
+                // Refresh card panels
+                foreach (var c in _cards) c.Invalidate();
 
                 dgvDashboard.Rows.Clear();
-                foreach (var alerta in alertasAtivos)
+                foreach (var a in alertas)
                 {
                     int row = dgvDashboard.Rows.Add(
-                        alerta.CidadeNome,
-                        alerta.Nivel.ToString(),
-                        alerta.Tipo.ToString(),
-                        $"{alerta.IndiceRisco:F1}",
-                        alerta.Descricao,
-                        alerta.DataHoraAlerta.ToString("dd/MM/yyyy HH:mm")
-                    );
-                    ColorirLinhaAlerta(dgvDashboard.Rows[row], alerta.Nivel);
+                        a.CidadeNome, a.Nivel.ToString(), a.Tipo.ToString(),
+                        $"{a.IndiceRisco:F1}", a.Descricao,
+                        a.DataHoraAlerta.ToString("dd/MM/yyyy HH:mm"));
+                    AplicarCorAlerta(dgvDashboard.Rows[row], a.Nivel);
                 }
 
-                lblUltimaAtualizacao.Text = $"Atualizado: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+                lblUltimaAtualizacao.Text = $"Atualizado: {DateTime.Now:dd/MM HH:mm:ss}";
             }
-            catch (Exception ex)
-            {
-                SetStatus($"Erro ao carregar dashboard: {ex.Message}");
-            }
+            catch (Exception ex) { SetStatus($"Erro dashboard: {ex.Message}"); }
         }
 
-        private async void BtnExecutarMonitoramento_Click(object sender, EventArgs e)
+        private async void BtnExecutar_Click(object? sender, EventArgs e)
         {
             btnExecutarMonitoramento.Enabled = false;
-            btnExecutarMonitoramento.Text = "⏳  Processando leituras de satélite...";
-            SetStatus("Executando ciclo de monitoramento via dados orbitais simulados (GOES-16)...");
+            btnExecutarMonitoramento.Text = "  Processando...";
+            SetStatus("Executando ciclo de monitoramento via dados orbitais simulados...");
 
             try
             {
@@ -101,27 +154,25 @@ namespace DisasterAlert.Forms
                 await CarregarComboFiltroAsync();
 
                 string msg = alertas.Count > 0
-                    ? $"✅ Ciclo concluído! {alertas.Count} alerta(s) gerado(s):\n\n" +
-                      string.Join("\n", alertas.Select(a => $"• {a.CidadeNome}: [{a.Nivel}] {a.Tipo}"))
-                    : "✅ Ciclo concluído! Nenhum alerta crítico gerado nesta leitura.";
+                    ? $"✅ Ciclo concluído!\n\n{alertas.Count} alerta(s) gerado(s):\n\n" +
+                      string.Join("\n", alertas.Select(a => $"  • {a.CidadeNome}: [{a.Nivel}] {a.Tipo}"))
+                    : "✅ Ciclo concluído!\nNenhum alerta crítico nesta leitura.";
 
                 MessageBox.Show(msg, "Monitoramento Concluído", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                SetStatus($"Ciclo concluído. {alertas.Count} alerta(s) gerado(s).");
+                SetStatus($"Ciclo concluído — {alertas.Count} alerta(s).");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro no ciclo de monitoramento:\n{ex.Message}", "Erro",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                SetStatus($"Erro: {ex.Message}");
+                MessageBox.Show($"Erro:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 btnExecutarMonitoramento.Enabled = true;
-                btnExecutarMonitoramento.Text = "🛰️  EXECUTAR CICLO DE MONITORAMENTO (SIMULAÇÃO SATÉLITE)";
+                btnExecutarMonitoramento.Text = "  Executar Monitoramento";
             }
         }
 
-        // ─── CIDADES ──────────────────────────────────────────────────────────
+        // ─── CIDADES ──────────────────────────────────────────────────────
         private async Task CarregarCidadesAsync()
         {
             try
@@ -129,15 +180,13 @@ namespace DisasterAlert.Forms
                 var cidades = await _cidadeRepo.ListarTodosAsync();
                 dgvCidades.Rows.Clear();
                 foreach (var c in cidades)
-                {
                     dgvCidades.Rows.Add(c.Id, c.Nome, c.Estado, c.Latitude, c.Longitude,
                         $"{c.PopulacaoEstimada:N0}", c.DataCadastro.ToString("dd/MM/yyyy"));
-                }
             }
-            catch (Exception ex) { SetStatus($"Erro ao carregar cidades: {ex.Message}"); }
+            catch (Exception ex) { SetStatus($"Erro cidades: {ex.Message}"); }
         }
 
-        private async void BtnNovaCidade_Click(object sender, EventArgs e)
+        private async void BtnNovaCidade_Click(object? sender, EventArgs e)
         {
             using var form = new FormCidade();
             if (form.ShowDialog() == DialogResult.OK)
@@ -147,19 +196,19 @@ namespace DisasterAlert.Forms
                     await _cidadeRepo.InserirAsync(form.Cidade);
                     await CarregarCidadesAsync();
                     await CarregarComboFiltroAsync();
-                    SetStatus($"Cidade '{form.Cidade.Nome}' cadastrada com sucesso.");
+                    SetStatus($"Cidade '{form.Cidade.Nome}' cadastrada.");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Erro ao salvar cidade:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private async void BtnEditarCidade_Click(object sender, EventArgs e)
+        private async void BtnEditarCidade_Click(object? sender, EventArgs e)
         {
             if (dgvCidades.SelectedRows.Count == 0) { MessageBox.Show("Selecione uma cidade."); return; }
-            int id = (int)dgvCidades.SelectedRows[0].Cells["Id"].Value;
+            int id = Convert.ToInt32(dgvCidades.SelectedRows[0].Cells["Id"].Value);
             var cidade = await _cidadeRepo.BuscarPorIdAsync(id);
             if (cidade == null) return;
 
@@ -174,21 +223,19 @@ namespace DisasterAlert.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Erro ao atualizar:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Erro: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private async void BtnExcluirCidade_Click(object sender, EventArgs e)
+        private async void BtnExcluirCidade_Click(object? sender, EventArgs e)
         {
             if (dgvCidades.SelectedRows.Count == 0) { MessageBox.Show("Selecione uma cidade."); return; }
-            int id = (int)dgvCidades.SelectedRows[0].Cells["Id"].Value;
-            string nome = dgvCidades.SelectedRows[0].Cells["Nome"].Value.ToString()!;
+            int id = Convert.ToInt32(dgvCidades.SelectedRows[0].Cells["Id"].Value);
+            string nome = dgvCidades.SelectedRows[0].Cells["Nome"].Value?.ToString() ?? "";
 
-            var confirm = MessageBox.Show($"Deseja excluir '{nome}' e todos seus dados?",
-                "Confirmar Exclusão", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (confirm == DialogResult.Yes)
+            if (MessageBox.Show($"Excluir '{nome}' e todos seus dados?", "Confirmar",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 try
                 {
@@ -198,16 +245,15 @@ namespace DisasterAlert.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Erro ao excluir:\n{ex.Message}\n\nVerifique se não há monitoramentos ou alertas vinculados.", "Erro",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Erro ao excluir.\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private async void BtnSimularCidade_Click(object sender, EventArgs e)
+        private async void BtnSimularCidade_Click(object? sender, EventArgs e)
         {
             if (dgvCidades.SelectedRows.Count == 0) { MessageBox.Show("Selecione uma cidade."); return; }
-            int id = (int)dgvCidades.SelectedRows[0].Cells["Id"].Value;
+            int id = Convert.ToInt32(dgvCidades.SelectedRows[0].Cells["Id"].Value);
             var cidade = await _cidadeRepo.BuscarPorIdAsync(id);
             if (cidade == null) return;
 
@@ -216,19 +262,20 @@ namespace DisasterAlert.Forms
                 var sim = new SimulacaoSateliteService();
                 var leitura = sim.GerarLeituraSatelite(cidade);
                 await _monitoramentoRepo.InserirAsync(leitura);
-
                 var alerta = AlertaDesastre.GerarAlerta(cidade, leitura);
-                string info = $"📡 Leitura Satélite — {cidade.Nome}\n\n" +
-                              $"Chuva Acumulada: {leitura.ChuvaAcumuladaMm} mm\n" +
-                              $"Temperatura: {leitura.TemperaturaC}°C\n" +
-                              $"Umidade: {leitura.UmidadeRelativa}%\n" +
-                              $"Velocidade do Vento: {leitura.VelocidadeVentoKmh} km/h\n\n" +
-                              $"Índice de Risco Calculado: {alerta.IndiceRisco:F1}/100\n" +
-                              $"Nível de Alerta: {alerta.Nivel}\n" +
-                              $"Tipo de Desastre: {alerta.Tipo}";
 
-                MessageBox.Show(info, "Simulação de Satélite", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                SetStatus($"Simulação para {cidade.Nome} concluída. Risco: {alerta.IndiceRisco:F1}");
+                MessageBox.Show(
+                    $"📡  Leitura de Satélite — {cidade.Nome}\n\n" +
+                    $"Chuva Acumulada:    {leitura.ChuvaAcumuladaMm} mm\n" +
+                    $"Temperatura:        {leitura.TemperaturaC}°C\n" +
+                    $"Umidade:            {leitura.UmidadeRelativa}%\n" +
+                    $"Velocidade do Vento:{leitura.VelocidadeVentoKmh} km/h\n\n" +
+                    $"Índice de Risco:    {alerta.IndiceRisco:F1} / 100\n" +
+                    $"Nível de Alerta:    {alerta.Nivel}\n" +
+                    $"Tipo de Desastre:   {alerta.Tipo}",
+                    "Simulação Concluída", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                SetStatus($"Simulação {cidade.Nome} — risco: {alerta.IndiceRisco:F1}");
             }
             catch (Exception ex)
             {
@@ -236,29 +283,26 @@ namespace DisasterAlert.Forms
             }
         }
 
-        // ─── MONITORAMENTOS ───────────────────────────────────────────────────
+        // ─── MONITORAMENTOS ───────────────────────────────────────────────
         private async Task CarregarComboFiltroAsync()
         {
-            var cidades = await _cidadeRepo.ListarTodosAsync();
-            cboCidadesFiltro.DataSource = cidades.ToList();
+            var cidades = (await _cidadeRepo.ListarTodosAsync()).ToList();
+            cboCidadesFiltro.DataSource = cidades;
             cboCidadesFiltro.DisplayMember = "Nome";
             cboCidadesFiltro.ValueMember = "Id";
         }
 
-        private async void BtnFiltrarMonitoramentos_Click(object sender, EventArgs e)
+        private async void BtnFiltrar_Click(object? sender, EventArgs e)
         {
-            if (cboCidadesFiltro.SelectedValue is int cidadeId)
-                await CarregarMonitoramentosAsync(cidadeId);
+            if (cboCidadesFiltro.SelectedValue is int id)
+                await CarregarMonitoramentosAsync(id);
         }
-
-        private async void BtnTodosMonitoramentos_Click(object sender, EventArgs e)
-            => await CarregarMonitoramentosAsync(null);
 
         private async Task CarregarMonitoramentosAsync(int? cidadeId = null)
         {
             try
             {
-                IEnumerable<MonitoramentoClimatico> dados = cidadeId.HasValue
+                var dados = cidadeId.HasValue
                     ? await _monitoramentoRepo.ListarPorCidadeAsync(cidadeId.Value)
                     : await _monitoramentoRepo.ListarTodosRecentesAsync(100);
 
@@ -268,33 +312,28 @@ namespace DisasterAlert.Forms
                     double risco = m.CalcularIndiceRisco();
                     int row = dgvMonitoramentos.Rows.Add(
                         m.Id, m.CidadeNome,
-                        $"{m.ChuvaAcumuladaMm:F1}",
-                        $"{m.TemperaturaC:F1}",
-                        $"{m.UmidadeRelativa:F1}",
-                        $"{m.VelocidadeVentoKmh:F1}",
-                        $"{risco:F1}",
-                        m.Fonte.ToString(),
-                        m.DataHoraRegistro.ToString("dd/MM/yyyy HH:mm")
-                    );
+                        $"{m.ChuvaAcumuladaMm:F1}", $"{m.TemperaturaC:F1}",
+                        $"{m.UmidadeRelativa:F1}", $"{m.VelocidadeVentoKmh:F1}",
+                        $"{risco:F1}", m.Fonte.ToString(),
+                        m.DataHoraRegistro.ToString("dd/MM/yyyy HH:mm"));
 
-                    // colore célula de risco
-                    var riscoColor = risco >= 75 ? Color.FromArgb(254, 100, 100)
-                        : risco >= 50 ? Color.FromArgb(251, 191, 36)
-                        : risco >= 25 ? Color.FromArgb(251, 146, 60)
-                        : Color.FromArgb(74, 222, 128);
+                    var riscoColor = risco >= 75 ? Color.FromArgb(210,   0,   0)   // Crítico - vermelho
+                        : risco >= 50            ? Color.FromArgb(185, 100,   0)   // Alto    - laranja
+                        : risco >= 25            ? Color.FromArgb(255, 200,   0)   // Médio   - amarelo
+                        :                          Color.FromArgb(  0, 200,  10);  // Baixo   - verde
                     dgvMonitoramentos.Rows[row].Cells["Risco"].Style.ForeColor = riscoColor;
-                    dgvMonitoramentos.Rows[row].Cells["Risco"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    dgvMonitoramentos.Rows[row].Cells["Risco"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 }
             }
             catch (Exception ex) { SetStatus($"Erro: {ex.Message}"); }
         }
 
-        // ─── ALERTAS ──────────────────────────────────────────────────────────
+        // ─── ALERTAS ──────────────────────────────────────────────────────
         private async Task CarregarAlertasAsync()
         {
             try
             {
-                IEnumerable<AlertaDesastre> alertas = chkSomenteAtivos.Checked
+                var alertas = chkSomenteAtivos.Checked
                     ? await _alertaRepo.ListarAtivosAsync()
                     : await _alertaRepo.ListarTodosAsync();
 
@@ -304,25 +343,24 @@ namespace DisasterAlert.Forms
                     int row = dgvAlertas.Rows.Add(
                         a.Id, a.CidadeNome, a.Nivel.ToString(), a.Tipo.ToString(),
                         $"{a.IndiceRisco:F1}", a.Descricao,
-                        a.Ativo ? "✅" : "❌",
-                        a.DataHoraAlerta.ToString("dd/MM/yyyy HH:mm")
-                    );
-                    if (a.Ativo) ColorirLinhaAlerta(dgvAlertas.Rows[row], a.Nivel);
+                        a.Ativo ? "Sim" : "Não",
+                        a.DataHoraAlerta.ToString("dd/MM/yyyy HH:mm"));
+                    if (a.Ativo) AplicarCorAlerta(dgvAlertas.Rows[row], a.Nivel);
                 }
             }
             catch (Exception ex) { SetStatus($"Erro: {ex.Message}"); }
         }
 
-        private async void BtnEncerrarAlerta_Click(object sender, EventArgs e)
+        private async void BtnEncerrar_Click(object? sender, EventArgs e)
         {
             if (dgvAlertas.SelectedRows.Count == 0) { MessageBox.Show("Selecione um alerta."); return; }
-            int id = (int)dgvAlertas.SelectedRows[0].Cells["Id"].Value;
+            int id = Convert.ToInt32(dgvAlertas.SelectedRows[0].Cells["Id"].Value);
             try
             {
                 await _alertaService.EncerrarAlertaAsync(id);
                 await CarregarAlertasAsync();
                 await CarregarDashboardAsync();
-                SetStatus($"Alerta #{id} encerrado com sucesso.");
+                SetStatus($"Alerta #{id} encerrado.");
             }
             catch (Exception ex)
             {
@@ -330,90 +368,58 @@ namespace DisasterAlert.Forms
             }
         }
 
-        // ─── RELATÓRIO ────────────────────────────────────────────────────────
+        // ─── RELATÓRIO ────────────────────────────────────────────────────
         private async Task CarregarRelatorioAsync()
         {
             try
             {
-                var relatorio = await _alertaService.ObterRelatorioAsync();
+                var rel = await _alertaService.ObterRelatorioAsync();
                 dgvRelatorio.Rows.Clear();
-                foreach (var r in relatorio)
+                foreach (var r in rel)
                 {
                     int row = dgvRelatorio.Rows.Add(
                         r.CidadeNome, r.Estado, r.TotalMonitoramentos,
                         $"{r.MediaChuva:F1}", $"{r.MediaTemperatura:F1}",
                         $"{r.IndiceRiscoMedio:F1}", r.AlertasAtivos,
                         r.NivelAlertaAtual,
-                        r.UltimaAtualizacao.ToString("dd/MM/yyyy HH:mm")
-                    );
-                    // Cor pelo nível de alerta atual
+                        r.UltimaAtualizacao.ToString("dd/MM/yyyy HH:mm"));
+
                     var cor = r.NivelAlertaAtual switch
                     {
-                        "Critico" => Color.FromArgb(254, 100, 100),
-                        "Alto" => Color.FromArgb(251, 191, 36),
-                        "Medio" => Color.FromArgb(251, 146, 60),
-                        _ => Color.FromArgb(74, 222, 128)
+                        "Critico" => Color.FromArgb(210,   0,   0),
+                        "Alto"    => Color.FromArgb(185, 100,   0),
+                        "Medio"   => Color.FromArgb(255, 200,   0),
+                        _         => Color.FromArgb(  0, 200,  10)
                     };
                     dgvRelatorio.Rows[row].Cells["NivelAtual"].Style.ForeColor = cor;
-                    dgvRelatorio.Rows[row].Cells["NivelAtual"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    dgvRelatorio.Rows[row].Cells["NivelAtual"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 }
             }
             catch (Exception ex) { SetStatus($"Erro: {ex.Message}"); }
         }
 
-        // ─── HELPERS ──────────────────────────────────────────────────────────
-        private async Task AoTrocarTabAsync()
+        // ─── HELPERS ──────────────────────────────────────────────────────
+        private void AplicarCorAlerta(DataGridViewRow row, NivelAlerta nivel)
         {
-            switch (tabControl.SelectedIndex)
+            // Baixo=Verde, Médio=Amarelo, Alto=Laranja, Crítico=Vermelho
+            var (bg, fg) = nivel switch
             {
-                case 0: await CarregarDashboardAsync(); break;
-                case 1: await CarregarCidadesAsync(); break;
-                case 2: await CarregarMonitoramentosAsync(); break;
-                case 3: await CarregarAlertasAsync(); break;
-                case 4: await CarregarRelatorioAsync(); break;
-            }
-        }
-
-        private void ColorirLinhaAlerta(DataGridViewRow row, NivelAlerta nivel)
-        {
-            var cor = nivel switch
-            {
-                NivelAlerta.Critico => Color.FromArgb(60, 20, 20),
-                NivelAlerta.Alto => Color.FromArgb(55, 40, 10),
-                NivelAlerta.Medio => Color.FromArgb(50, 40, 10),
-                _ => Color.FromArgb(15, 23, 42)
+                NivelAlerta.Critico => (Color.FromArgb(255, 235, 235), Color.FromArgb(210,   0,   0)),
+                NivelAlerta.Alto    => (Color.FromArgb(255, 243, 220), Color.FromArgb(185, 100,   0)),
+                NivelAlerta.Medio   => (Color.FromArgb(255, 252, 200), Color.FromArgb(180, 140,   0)),
+                _                   => (Color.FromArgb(230, 255, 230), Color.FromArgb(  0, 200,  10))
             };
-            row.DefaultCellStyle.BackColor = cor;
+            row.DefaultCellStyle.BackColor = bg;
+            row.DefaultCellStyle.SelectionBackColor = ControlPaint.Light(bg, 0.3f);
 
-            var nivelCor = nivel switch
-            {
-                NivelAlerta.Critico => Color.FromArgb(254, 100, 100),
-                NivelAlerta.Alto => Color.FromArgb(251, 191, 36),
-                NivelAlerta.Medio => Color.FromArgb(251, 146, 60),
-                _ => Color.FromArgb(74, 222, 128)
-            };
-            // colore a célula de nível se existir
             foreach (DataGridViewCell cell in row.Cells)
-            {
                 if (row.DataGridView?.Columns[cell.ColumnIndex]?.Name == "Nivel")
                 {
-                    cell.Style.ForeColor = nivelCor;
-                    cell.Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    cell.Style.ForeColor = fg;
+                    cell.Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 }
-            }
         }
 
-        private void AtualizarCard(Panel card, string valor)
-        {
-            foreach (Control ctrl in card.Controls)
-                if (ctrl is Label lbl && lbl.Font.Size > 15)
-                    lbl.Text = valor;
-        }
-
-        private void SetStatus(string msg)
-        {
-            if (lblStatusBar != null)
-                lblStatusBar.Text = msg;
-        }
+        private void SetStatus(string msg) => lblStatusBar.Text = msg;
     }
 }
