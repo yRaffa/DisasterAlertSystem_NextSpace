@@ -78,7 +78,7 @@ dotnet run
 ## 🗂️ Estrutura do Projeto
 
 ```
-DisasterAlert/
+DisasterAlertSystem_NextSpace/
 ├── Models/
 │   ├── Cidade.cs                      # Entidade cidade com dados geográficos
 │   ├── MonitoramentoClimatico.cs      # Leitura de dados do satélite + cálculo de risco
