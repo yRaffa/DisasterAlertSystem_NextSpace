@@ -85,11 +85,11 @@ DisasterAlert/
 │   ├── AlertaDesastre.cs              # Alerta gerado com nível e tipo de desastre
 │   └── RelatorioResumo.cs             # DTO para relatório consolidado
 ├── Repositories/
-│   ├── CidadeRepository.cs            # CRUD de cidades (Dapper + SQL Server)
+│   ├── CidadeRepository.cs            # CRUD de cidades
 │   ├── MonitoramentoRepository.cs     # Persistência de monitoramentos
 │   └── AlertaRepository.cs            # Persistência e consulta de alertas + relatório
 ├── Services/
-│   ├── SimulacaoSateliteService.cs    # Simula leituras de satélite (GOES-16/INPE)
+│   ├── SimulacaoSateliteService.cs    # Simula leituras de satélite 
 │   └── AlertaService.cs               # Orquestra ciclo: satélite → monitoramento → alerta
 ├── Forms/
 │   ├── FormDashboard.cs               # Tela principal com 5 abas
