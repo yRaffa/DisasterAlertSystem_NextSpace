@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\FIAP\\CS\\GS\\DisasterAlert\\DisasterAlert.csproj": {}
+    "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\DisasterAlert.csproj": {}
   },
   "projects": {
-    "C:\\FIAP\\CS\\GS\\DisasterAlert\\DisasterAlert.csproj": {
+    "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\DisasterAlert.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\FIAP\\CS\\GS\\DisasterAlert\\DisasterAlert.csproj",
+        "projectUniqueName": "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\DisasterAlert.csproj",
         "projectName": "DisasterAlert",
-        "projectPath": "C:\\FIAP\\CS\\GS\\DisasterAlert\\DisasterAlert.csproj",
+        "projectPath": "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\DisasterAlert.csproj",
         "packagesPath": "C:\\Users\\7raff\\.nuget\\packages\\",
-        "outputPath": "C:\\FIAP\\CS\\GS\\DisasterAlert\\obj\\",
+        "outputPath": "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\7raff\\AppData\\Roaming\\NuGet\\NuGet.Config",

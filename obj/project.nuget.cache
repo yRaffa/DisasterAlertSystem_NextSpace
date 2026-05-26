@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "ODTNh7aFaKc=",
+  "dgSpecHash": "/5orTk4WR8g=",
   "success": true,
-  "projectFilePath": "C:\\FIAP\\CS\\GS\\DisasterAlert\\DisasterAlert.csproj",
+  "projectFilePath": "C:\\FIAP\\CS\\GS\\DisasterAlertSystem_NextSpace\\DisasterAlert.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\7raff\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\7raff\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

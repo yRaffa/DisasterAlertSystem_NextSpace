@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DisasterAlert")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6f6f80a85b92f165910a0b2b782e870d464b5e93")]
 [assembly: System.Reflection.AssemblyProductAttribute("DisasterAlert")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DisasterAlert")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
