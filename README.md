@@ -27,7 +27,7 @@ Os satélites de observação da Terra fornecem dados contínuos de temperatura,
 
 Esta aplicação simula como esses dados seriam consumidos e processados por um sistema de alerta precoce municipal.
 
-**Caso o sitema entre em prudção, aqui estão as APIs que podem ser integradas:**
+**Caso o sitema entre em produção, essas são APIs que podem ser integradas:**
 - [NASA Earthdata API](https://earthdata.nasa.gov/)
 - [INPE Dados Abertos](https://queimadas.dgi.inpe.br/)
 - [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/)
