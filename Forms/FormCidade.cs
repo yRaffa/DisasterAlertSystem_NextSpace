@@ -19,7 +19,7 @@ namespace DisasterAlert.Forms
         private void BuildUI()
         {
             Text = Cidade.Id == 0 ? "Nova Cidade" : "Editar Cidade";
-            Size = new Size(460, 420);
+            Size = new Size(460, 520);
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.White;
             ForeColor = Color.FromArgb(30, 41, 59);
