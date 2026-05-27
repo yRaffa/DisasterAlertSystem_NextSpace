@@ -27,7 +27,7 @@ Os satélites de observação da Terra fornecem dados contínuos de temperatura,
 
 Esta aplicação simula como esses dados seriam consumidos e processados por um sistema de alerta precoce municipal.
 
-**Caso o sitema entre em produção, essas são APIs que podem ser integradas:**
+**Caso o sistema entre em produção, essas são APIs que podem ser integradas:**
 - [NASA Earthdata API](https://earthdata.nasa.gov/)
 - [INPE Dados Abertos](https://queimadas.dgi.inpe.br/)
 - [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/)
@@ -44,7 +44,7 @@ Esta aplicação simula como esses dados seriam consumidos e processados por um 
 
 ## 🗄️ Configuração do Banco de Dados
 
-1. Abra o **DBeaver** e conecte ao seu SQL Server
+1. Abra o **DBeaver** (ou outro gerenciador de banco de dados) e conecte ao seu SQL Server 
 2. Crie um banco de dados chamado `DisasterAlertDB`:
    ```sql
    CREATE DATABASE DisasterAlertDB;
@@ -108,7 +108,7 @@ DisasterAlertSystem_NextSpace/
 ### 1. Dashboard
 - Exibe **cards** com total de cidades, alertas ativos e nível crítico
 - Lista alertas ativos coloridos por nível (vermelho = crítico, amarelo = alto)
-- **Botão principal**: `🛰️ EXECUTAR CICLO DE MONITORAMENTO` — simula leitura de todos os satélites e gera alertas automaticamente
+- **Função principal** `🛰️ EXECUTAR CICLO DE MONITORAMENTO`: simula leitura de todos os satélites e gera alertas automaticamente
 
 ### 2. Cidades
 - **CRUD completo**: cadastrar, editar, excluir cidades
