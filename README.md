@@ -154,12 +154,11 @@ O índice é calculado em `MonitoramentoClimatico.CalcularIndiceRisco()`:
 
 ## 📚 Referências
 
-- **INPE** — Introdução ao Sensoriamento Remoto. Disponível em: http://www.inpe.br/
-- **Florenzano, T. G.** — *Iniciação em Sensoriamento Remoto*. Oficina de Textos, 2011. *(referência em português)*
 - **AEB** — Fundamentos de Sensoriamento Remoto. Agência Espacial Brasileira.
-- **NASA Earthdata** — Earth Observation Data. https://earthdata.nasa.gov/
-- **NOAA GOES-16** — Geostationary Operational Environmental Satellite. https://www.goes.noaa.gov/
-- **Copernicus Programme** — European Earth Observation Programme. https://www.copernicus.eu/
+- [**INPE**](http://www.inpe.br/) — Introdução ao Sensoriamento Remoto.
+- [**NASA Earthdata**](https://earthdata.nasa.gov/) — Earth Observation Data.
+- [**NOAA GOES-16**](https://www.goes.noaa.gov/) — Geostationary Operational Environmental Satellite.
+- [**Copernicus Programme**](https://www.copernicus.eu/) — European Earth Observation Programme.
 
 ---
 
